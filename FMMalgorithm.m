@@ -1,7 +1,16 @@
+max_p = 64;
+initialize_quadtree(mask, [1 4601 1 5201] , 64)
+
 %% Initialization
+function boundary = boundary(matrix)
+    % 自動給出矩陣的邊界 [xmin xmax ymin ymax]  
+    % 看起來沒問題
+    boundary = [1 size(matrix,1) 1 size(matrix,2)]
+end   
+
 function quadtree = initialize_quadtree(particles, boundary, max_particles)
-    % particles: 粒子的位置信息
-    % boundary: 節點的邊界 [xmin, xmax, ymin, ymax]
+    % particles: 可能包含粒子的節點(矩陣)
+    % boundary: 節點的邊界 [xmin xmax ymin ymax]
     % max_particles: 每個節點中最多能容納的粒子數
     
     % 如果當前節點的粒子數量超過 max_particles，則分割區域
@@ -27,7 +36,8 @@ function quadtree = initialize_quadtree(particles, boundary, max_particles)
 end
 
 function [region1, region2, region3, region4] = split_boundary(boundary)
-    % 根據當前邊界將其分成四個子區域
+    % 根據當前邊界將其分成四個子區域  
+    % 看起來沒問題
     mid_x = (boundary(1) + boundary(2)) / 2;
     mid_y = (boundary(3) + boundary(4)) / 2;
     
@@ -38,10 +48,12 @@ function [region1, region2, region3, region4] = split_boundary(boundary)
 end
 
 function filtered_particles = filter_particles(particles, region)
-    % 過濾出位於 region 內的粒子
+    % 過濾出位於 region 內的粒子  
+    % ???????????
     filtered_particles = particles(particles(:,1) >= region(1) & particles(:,1) <= region(2) & ...
                                    particles(:,2) >= region(3) & particles(:,2) <= region(4), :);
 end
+
 
 %% Upward pass
 function multipole_expansion = upward_pass(node)
@@ -58,11 +70,13 @@ function multipole_expansion = upward_pass(node)
     end
 end
 
+
 function multipole = compute_multipole(particles)
     % 根據粒子的位置和劑量值計算多極展開
     % 此處可自訂 Chebyshev 插值或其他方法
     multipole = sum(particles(:, 3));  % 假設第三列是劑量值
 end
+
 
 function result = merge_multipole(parent_multipole, child_multipole)
     % 合併父節點和子節點的多極展開
