@@ -122,7 +122,7 @@ end
 %V_list = struct('node', '', 'cell', {} );
 % V_list(400).node= (0);
 % V_list(400).cell= (0);
-pre_order_traversal(mask_quadtree);
+U_list = pre_order_traversal(mask_quadtree);
 
 global U_counter_for_name ;
 U_counter_for_name = 0;
@@ -307,6 +307,8 @@ U_list = struct('node', "", 'cell', {0 0 0 0} );
         pre_order_traversal(root_node(4).children);
 
     end
+
+    y = U_list;
 end
 
 
