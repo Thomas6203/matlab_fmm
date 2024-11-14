@@ -122,327 +122,158 @@ end
 %V_list = struct('node', '', 'cell', {} );
 % V_list(400).node= (0);
 % V_list(400).cell= (0);
-U_list = pre_order_traversal(mask_quadtree);
+
+% U_list = pre_order_traversal(mask_quadtree);
 
 % global U_counter_for_name %%為何會出現不會被下一句歸零的情況??????????
 % U_counter_for_name = 0;
 
+U_list = save_the_leaf_nodes_on_the_same_level(mask_quadtree);
+ 
+function y = save_the_leaf_nodes_on_the_same_level(root)
+%先用廣度優先演算法 存同level 的葉節點，並且省略元素全為0的葉節點
 
-function y = pre_order_traversal(root_node)
+    U_list= struct('level', {} , 'cell', {} );
+    % 初始化一個佇列來存放節點
+    queue = {root};
+    counter = 1;
 
-    U_list = struct('node', "", 'cell', {} ); 
-    
-    have_runned111 = 0;
-    if (have_runned111 == 0)
-       U_counter_for_name = 0 ;
-       have_runned111 = have_runned111 + 1;
-    end
-    
+    while ~isempty(queue)
+        % 從佇列中取出第一個節點
+        currentNode = queue{1};
+        queue(1) = []; % 將取出的節點移除
 
-    if isempty(root_node(1).children) == 0
+        % % 顯示當前節點
+        % disp(currentNode);
 
-        %%U_list: 與一個小方塊四周的任一邊界相鄰者 且層級相同者
-        %如何對於一個節點，讀取或列出所有與其相同層級的節點?? done?
+        % ignore_this = struct('name1',{},'name2',{});
+        % ignore_this(1).name = 1;
+        % U_list(counter).cell(1) = ignore_this(1);
 
-        have_runned = 0;
-        for i = 1:4
-            counter_for_cell_of_I  = 0;
-            if (    root_node(i).level == root_node(1).level...
-                    && ...
-                    (root_node(i).boundary(1) == root_node(1).boundary(1)|| ...
-                    root_node(i).boundary(2) == root_node(1).boundary(1)||...
-                    root_node(i).boundary(1) == root_node(1).boundary(2)|| ...
-                    root_node(i).boundary(2) == root_node(1).boundary(2)...
-                    )&&...
-                    (root_node(i).boundary(3) == root_node(1).boundary(3)|| ...
-                    root_node(i).boundary(4) == root_node(1).boundary(3)|| ...
-                    root_node(i).boundary(3) == root_node(1).boundary(4)|| ...
-                    root_node(i).boundary(4) == root_node(1).boundary(4)...
-                    )...
-                    && isempty(root_node(i).children) == 0 ...
-                )
-
-                if (have_runned == 0)
-                    U_counter_for_name = U_counter_for_name  + 1;
-                    have_runned = have_runned + 1;
-                end
-
-                counter_for_cell_of_I  = counter_for_cell_of_I  + 1;
-                U_list(U_counter_for_name).cell(counter_for_cell_of_I)...
-                                            = {root_node(i).children };
-                U_list(U_counter_for_name).node= sprintf("%s%c%d%s", inputname(1), ...
-                    '(', 1 ...
-                    , ").children");
-            end
-        end
-        
-        % U_list(U_counter1).list= [root_node(2).children root_node(3).children
-        %                 root_node(4).children ];
-
-        pre_order_traversal(root_node(1).children);
-
-    end
-
-    if isempty(root_node(2).children) == 0
-        
-        have_runned = 0;
-        for i = 1:4
-            counter_for_cell_of_I  = 0;
-            if (    root_node(i).level == root_node(2).level...
-                    && ...
-                    (root_node(i).boundary(1) == root_node(2).boundary(1)|| ...
-                    root_node(i).boundary(2) == root_node(2).boundary(1)||...
-                    root_node(i).boundary(1) == root_node(2).boundary(2)|| ...
-                    root_node(i).boundary(2) == root_node(2).boundary(2)...
-                    )&&...
-                    (root_node(i).boundary(3) == root_node(2).boundary(3)|| ...
-                    root_node(i).boundary(4) == root_node(2).boundary(3)|| ...
-                    root_node(i).boundary(3) == root_node(2).boundary(4)|| ...
-                    root_node(i).boundary(4) == root_node(2).boundary(4)...
-                    )...
-                    && isempty(root_node(i).children) == 0 ...
-                )
-
-                if (have_runned == 0)
-                    U_counter_for_name = U_counter_for_name  + 1;
-                    have_runned = have_runned + 1;
-                end
-
-                counter_for_cell_of_I  = counter_for_cell_of_I  + 1;
-                U_list(U_counter_for_name).cell(counter_for_cell_of_I)...
-                                            = {root_node(i).children };
-                U_list(U_counter_for_name).node= sprintf("%s%c%d%s", inputname(1), ...
-                    '(', 2 ...
-                    , ").children");
-
-            end
-        end
-        
-
-
-        
-        
-        % U_list(U_counter1).list= [root_node(1).children root_node(3).children
-        %                 root_node(4).children ];
-        % 
-        pre_order_traversal(root_node(2).children);
-
-    end
-
-    if isempty(root_node(3).children) == 0
-
-        have_runned = 0;
-        for i = 1:4
-            counter_for_cell_of_I  = 0;
-            if (    root_node(i).level == root_node(3).level...
-                    && ...
-                    (root_node(i).boundary(1) == root_node(3).boundary(1)|| ...
-                    root_node(i).boundary(2) == root_node(3).boundary(1)||...
-                    root_node(i).boundary(1) == root_node(3).boundary(2)|| ...
-                    root_node(i).boundary(2) == root_node(3).boundary(2)...
-                    )&&...
-                    (root_node(i).boundary(3) == root_node(3).boundary(3)|| ...
-                    root_node(i).boundary(4) == root_node(3).boundary(3)|| ...
-                    root_node(i).boundary(3) == root_node(3).boundary(4)|| ...
-                    root_node(i).boundary(4) == root_node(3).boundary(4)...
-                    )...
-                    && isempty(root_node(i).children) == 0 ...
-                )
-
-                if (have_runned == 0)
-                    U_counter_for_name = U_counter_for_name  + 1;
-                    have_runned = have_runned + 1;
-                end
-
-                counter_for_cell_of_I  = counter_for_cell_of_I  + 1;
-                U_list(U_counter_for_name).cell(counter_for_cell_of_I)...
-                                            = {root_node(i).children };
-                U_list(U_counter_for_name).node= sprintf("%s%c%d%s", inputname(1), ...
-                    '(', 3 ...
-                    , ").children");
-            end
-
-        end
-        
-        
-        % U_list(U_counter1).list= [root_node(1).children root_node(2).children
-        %                 root_node(4).children ];
-
-        pre_order_traversal(root_node(3).children);
-
-    end
-
-    if isempty(root_node(4).children) == 0
-
-        have_runned = 0;
-        for i = 1:4
-            counter_for_cell_of_I  = 0;
-            if (    root_node(i).level == root_node(4).level...
-                    && ...
-                    (root_node(i).boundary(1) == root_node(4).boundary(1)|| ...
-                    root_node(i).boundary(2) == root_node(4).boundary(1)||...
-                    root_node(i).boundary(1) == root_node(4).boundary(2)|| ...
-                    root_node(i).boundary(2) == root_node(4).boundary(2)...
-                    )&&...
-                    (root_node(i).boundary(3) == root_node(4).boundary(3)|| ...
-                    root_node(i).boundary(4) == root_node(4).boundary(3)|| ...
-                    root_node(i).boundary(3) == root_node(4).boundary(4)|| ...
-                    root_node(i).boundary(4) == root_node(4).boundary(4)...
-                    )...
-                    && isempty(root_node(i).children) == 0 ...
-                )
-
-                if (have_runned == 0)
-                    U_counter_for_name = U_counter_for_name  + 1;
-                    have_runned = have_runned + 1;
-                end
-
-                counter_for_cell_of_I  = counter_for_cell_of_I  + 1;
-                U_list(U_counter_for_name).cell(counter_for_cell_of_I)...
-                                            = {root_node(i).children};
-                U_list(U_counter_for_name).node= sprintf("%s%c%d%s", inputname(1), ...
-                    '(', 4 ...
-                    , ").children");
-            end
-
+        U_list(counter).level =  counter;
+        if currentNode(1).level ~= counter
+            counter = counter + 1;
         end
 
-        
-        % U_list(U_counter1).list= [root_node(1).children root_node(2).children
-        %                 root_node(3).children ];
+        have_runned = 0;%解決陣列還沒有元素前，不能使用end+1的問題
+                        %並解決參數中的end+1語法，有一樣的資料型態甚至連結構變數都要相同的問題
+                     
+        % 檢查並加入子節點到佇列中
+        if ~isempty(currentNode(1).children)
+            queue{end + 1} = currentNode(1).children;
+            if(nnz(currentNode(1).divided_particles) ~= 0)
+                if have_runned == 0;
+                    U_list(counter).cell(1) = currentNode(1);
+                    have_runned = have_runned + 1;
+                else
+                    U_list(counter).cell(end+1) = currentNode(1);
+                end
+            end
+        end
 
-        pre_order_traversal(root_node(4).children);
+        if ~isempty(currentNode(2).children)
+            queue{end + 1} = currentNode(2).children;      
+            if(nnz(currentNode(2).divided_particles) ~= 0)
+                U_list(counter).cell(end+1) = currentNode(2);
+            end
+        end
 
+        if ~isempty(currentNode(3).children)
+            queue{end + 1} = currentNode(3).children;
+            if(nnz(currentNode(3).divided_particles) ~= 0)
+                U_list(counter).cell(end+1) = currentNode(3);
+            end
+        end
+
+        if ~isempty(currentNode(4).children)
+            queue{end + 1} = currentNode(4).children;
+            if(nnz(currentNode(4).divided_particles) ~= 0)
+                U_list(counter).cell(end+1) = currentNode(4);
+            end
+        end
     end
 
     y = U_list;
 end
 
-
-
-% function quadtree = initialize_quadtree(particles, boundary, max_particles)
-%     % particles: 粒子的位置信息
-%     % boundary: 節點的邊界 [xmin, xmax, ymin, ymax]
-%     % max_particles: 每個節點中最多能容納的粒子數
-% 
-%     % 如果當前節點的粒子數量超過 max_particles，則分割區域
-%     if numel(particles) > max_particles
-%         quadtree = struct('children', {}, 'particles', [], 'boundary', []);
-%         % 分割成四個區域
-%         [region1, region2, region3, region4] = split_boundary(boundary);
-%         % 根據位置將粒子分配到各個區域
-%         quadtree(1).particles = filter_particles(particles, region1);
-%         quadtree(2).particles = filter_particles(particles, region2);
-%         quadtree(3).particles = filter_particles(particles, region3);
-%         quadtree(4).particles = filter_particles(particles, region4);
-% 
-%         % 遞迴地為每個子區域建立四叉樹
-%         quadtree(1).children = initialize_quadtree(particles1, region1, max_particles);
-%         quadtree(2).children = initialize_quadtree(particles2, region2, max_particles);
-%         quadtree(3).children = initialize_quadtree(particles3, region3, max_particles);
-%         quadtree(4).children = initialize_quadtree(particles4, region4, max_particles);
-%     else
-%         % 如果粒子數量在可接受範圍內，則不分割
-%         quadtree = struct('children', {}, 'particles', particles, 'boundary', boundary);
-%     end
-% end
-% 
-% function [region1, region2, region3, region4] = split_boundary(boundary)
-%     % 根據當前邊界將其分成四個子區域
-%     mid_x = (boundary(1) + boundary(2)) / 2;
-%     mid_y = (boundary(3) + boundary(4)) / 2;
-% 
-%     region1 = [boundary(1), mid_x, boundary(3), mid_y];
-%     region2 = [mid_x, boundary(2), boundary(3), mid_y];
-%     region3 = [boundary(1), mid_x, mid_y, boundary(4)];
-%     region4 = [mid_x, boundary(2), mid_y, boundary(4)];
-% end
-% 
-% function filtered_particles = filter_particles(particles, region)
-%     % 過濾出位於 region 內的粒子
-%     filtered_particles = particles(particles(:,1) >= region(1) & particles(:,1) <= region(2) & ...
-%                                    particles(:,2) >= region(3) & particles(:,2) <= region(4), :);
-% end
-
-
-
-% 
-% 
-% Upward pass
-% function multipole_expansion = upward_pass(node)
-%     如果是葉節點，計算多極展開
-%     if isempty(node{})
-%         multipole_expansion = compute_multipole(node.particles);
-%     else
-%         否則，遞迴地計算每個子節點的多極展開，並合併結果
-%         multipole_expansion = 0;
-%         for i = 1:4
-%             child_expansion = upward_pass(node.children{i});
-%             multipole_expansion = merge_multipole(multipole_expansion, child_expansion);
-%         end
-%     end
-% end
-% 
-% 
-% function multipole = compute_multipole(particles)
-%     根據粒子的位置和劑量值計算多極展開
-%     此處可自訂 Chebyshev 插值或其他方法
-%     multipole = sum(particles(:, 3));  % 假設第三列是劑量值
-% end
-% 
-% 
-% function result = merge_multipole(parent_multipole, child_multipole)
-%     合併父節點和子節點的多極展開
-%     result = parent_multipole + child_multipole;
-% end
+% % 
+% % 
+% % Upward pass
+% % function multipole_expansion = upward_pass(node)
+% %     如果是葉節點，計算多極展開
+% %     if isempty(node{})
+% %         multipole_expansion = compute_multipole(node.particles);
+% %     else
+% %         否則，遞迴地計算每個子節點的多極展開，並合併結果
+% %         multipole_expansion = 0;
+% %         for i = 1:4
+% %             child_expansion = upward_pass(node.children{i});
+% %             multipole_expansion = merge_multipole(multipole_expansion, child_expansion);
+% %         end
+% %     end
+% % end
+% % 
+% % 
+% % function multipole = compute_multipole(particles)
+% %     根據粒子的位置和劑量值計算多極展開
+% %     此處可自訂 Chebyshev 插值或其他方法
+% %     multipole = sum(particles(:, 3));  % 假設第三列是劑量值
+% % end
+% % 
+% % 
+% % function result = merge_multipole(parent_multipole, child_multipole)
+% %     合併父節點和子節點的多極展開
+% %     result = parent_multipole + child_multipole;
+% % end
+% % 
+% % 
+% % 
 % 
 % 
 % 
-
-
-
-% %% Downward pass
-% function local_expansion = downward_pass(node, parent_local_expansion)
-%     % 計算當前節點的局部展開，從父節點向下傳遞
-%     if isempty(node.children)
-%         local_expansion = parent_local_expansion + compute_local(node.particles);
-%     else
-%         % 遞迴地對每個子節點進行局部展開的傳遞
-%         for i = 1:4
-%             node.children{i}.local_expansion = downward_pass(node.children{i}, parent_local_expansion);
-%         end
-%     end
-% end
+% % %% Downward pass
+% % function local_expansion = downward_pass(node, parent_local_expansion)
+% %     % 計算當前節點的局部展開，從父節點向下傳遞
+% %     if isempty(node.children)
+% %         local_expansion = parent_local_expansion + compute_local(node.particles);
+% %     else
+% %         % 遞迴地對每個子節點進行局部展開的傳遞
+% %         for i = 1:4
+% %             node.children{i}.local_expansion = downward_pass(node.children{i}, parent_local_expansion);
+% %         end
+% %     end
+% % end
+% % 
+% % function local = compute_local(particles)
+% %     % 計算粒子的局部展開
+% %     local = sum(particles(:, 3));  % 假設第三列是劑量值
+% % end
+% % 
+% % 
 % 
-% function local = compute_local(particles)
-%     % 計算粒子的局部展開
-%     local = sum(particles(:, 3));  % 假設第三列是劑量值
-% end
 % 
 % 
-
-
-
-
-% %% Gather
-% function energy_distribution = gather(node)
-%     if isempty(node.children)
-%         % 如果是葉節點，返回能量分佈
-%         energy_distribution = compute_energy(node.particles);
-%     else
-%         % 否則，遞迴地收集每個子節點的能量分佈
-%         energy_distribution = 0;
-%         for i = 1:4
-%             energy_distribution = energy_distribution + gather(node.children{i});
-%         end
-%     end
-% end
 % 
-% function energy = compute_energy(particles)
-%     % 計算每個粒子的最終能量分佈
-%     % 假設能量與多極展開和局部展開的結果相關
-%     energy = sum(particles(:, 3));  % 假設第三列是劑量值
-% end
-
+% % %% Gather
+% % function energy_distribution = gather(node)
+% %     if isempty(node.children)
+% %         % 如果是葉節點，返回能量分佈
+% %         energy_distribution = compute_energy(node.particles);
+% %     else
+% %         % 否則，遞迴地收集每個子節點的能量分佈
+% %         energy_distribution = 0;
+% %         for i = 1:4
+% %             energy_distribution = energy_distribution + gather(node.children{i});
+% %         end
+% %     end
+% % end
+% % 
+% % function energy = compute_energy(particles)
+% %     % 計算每個粒子的最終能量分佈
+% %     % 假設能量與多極展開和局部展開的結果相關
+% %     energy = sum(particles(:, 3));  % 假設第三列是劑量值
+% % end
+% 
 elapsedTime = toc; % 結束計時並返回所花時間（秒）
 fprintf('程式執行時間：%.2f 秒\n', elapsedTime);
+
