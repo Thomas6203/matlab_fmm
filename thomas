@@ -109,9 +109,13 @@ function [quadtree, cell] = initialize_quadtree(particles, levelnum, cell, bound
     else
         % 如果粒子數量在可接受範圍內，則不分割
         % 需要給個空集合才能在後續使用isempty!!
-        quadtree = struct('children', {}, 'particles', particles);
+        quadtree = struct('children', {}, 'divided_particles', particles, ...
+                          'level', levelnum,'boundary', boundary) ;
+        quadtree(1).level = levelnum;
+        quadtree(1).boundary = boundary;
+        quadtree(1).divided_particles = particles;
+        quadtree(1).children = {};
     end
-
 end  
 
 
@@ -128,12 +132,12 @@ end
 % global U_counter_for_name %%為何會出現不會被下一句歸零的情況??????????
 % U_counter_for_name = 0;
 
-U_list = save_the_leaf_nodes_on_the_same_level(mask_quadtree);
+level_list = save_the_leaf_nodes_on_the_same_level(mask_quadtree);
  
 function y = save_the_leaf_nodes_on_the_same_level(root)
 %先用廣度優先演算法 存同level 的葉節點，並且省略元素全為0的葉節點
 
-    U_list= struct('level', {} , 'cell', {} );
+    level_list= struct('level', {} , 'cell', {} );
     % 初始化一個佇列來存放節點
     queue = {root};
     counter = 1;
@@ -150,7 +154,7 @@ function y = save_the_leaf_nodes_on_the_same_level(root)
         % ignore_this(1).name = 1;
         % U_list(counter).cell(1) = ignore_this(1);
 
-        U_list(counter).level =  counter;
+        level_list(counter).level =  counter;
         if currentNode(1).level ~= counter
             counter = counter + 1;
         end
@@ -162,38 +166,53 @@ function y = save_the_leaf_nodes_on_the_same_level(root)
         if ~isempty(currentNode(1).children)
             queue{end + 1} = currentNode(1).children;
             if(nnz(currentNode(1).divided_particles) ~= 0)
-                if have_runned == 0;
-                    U_list(counter).cell(1) = currentNode(1);
+                if have_runned == 0
+                    level_list(counter).cell(1) = currentNode(1);
                     have_runned = have_runned + 1;
                 else
-                    U_list(counter).cell(end+1) = currentNode(1);
+                    level_list(counter).cell(end+1) = currentNode(1);
                 end
             end
         end
 
-        if ~isempty(currentNode(2).children)
+        if length(currentNode) >= 2 && ~isempty(currentNode(2).children)
             queue{end + 1} = currentNode(2).children;      
             if(nnz(currentNode(2).divided_particles) ~= 0)
-                U_list(counter).cell(end+1) = currentNode(2);
+                if have_runned == 0
+                    level_list(counter).cell(1) = currentNode(2);
+                    have_runned = have_runned + 1;
+                else
+                    level_list(counter).cell(end+1) = currentNode(2);
+                end
             end
         end
 
-        if ~isempty(currentNode(3).children)
+        if length(currentNode) >= 3 && ~isempty(currentNode(3).children)
             queue{end + 1} = currentNode(3).children;
             if(nnz(currentNode(3).divided_particles) ~= 0)
-                U_list(counter).cell(end+1) = currentNode(3);
+                if have_runned == 0
+                    level_list(counter).cell(1) = currentNode(3);
+                    have_runned = have_runned + 1;
+                else
+                    level_list(counter).cell(end+1) = currentNode(3);
+                end
             end
         end
 
-        if ~isempty(currentNode(4).children)
+        if length(currentNode) >= 4 && ~isempty(currentNode(4).children)
             queue{end + 1} = currentNode(4).children;
             if(nnz(currentNode(4).divided_particles) ~= 0)
-                U_list(counter).cell(end+1) = currentNode(4);
+                if have_runned == 0
+                    level_list(counter).cell(1) = currentNode(4);
+                    have_runned = have_runned + 1;
+                else
+                    level_list(counter).cell(end+1) = currentNode(4);
+                end
             end
         end
     end
 
-    y = U_list;
+    y = level_list;
 end
 
 % % 
