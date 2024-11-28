@@ -5,11 +5,11 @@ n = 4;
 
 global max_particles
 max_particles = 4*n^2;
-mask(8192,8192)=0;
+mask(2^13,2^13)=0; %2^13是最靠近且大於mask邊長大小的2的指數，目的是讓mask在分割時，不出現小數座標
 levelnum = 1;
-cell={0}; 
-[mask_quadtree, cell ]= initialize_quadtree(mask, levelnum, cell, ...
-                                            normalized_boundary(mask));
+
+[mask_quadtree]= initialize_quadtree(mask, levelnum, ...
+                                            normalized_boundary(mask), [1,1]);
 
 %% Initialization
 function normalized_boundary = normalized_boundary(matrix)
@@ -18,12 +18,12 @@ function normalized_boundary = normalized_boundary(matrix)
     normalized_boundary = [-1 1 -1 1];
 end   %如果cell可以保持原矩陣元素的順序和位置，就可以不用頂點， %暫時不考慮
       
-
-function [quadtree, cell] = initialize_quadtree(particles, levelnum, cell, boundary)
+%%
+function [quadtree] = initialize_quadtree(particles, levelnum, boundary, coordinate)
     % particles: 可能包含粒子的節點(矩陣)
     % boundary: 節點的邊界 [xmin xmax ymin ymax]
     % max_particles: 每個節點中最多能容納的粒子數
-    %% cell 尚未能成功實現
+    %%% cell 尚未能成功實現
     
 
     % 如果當前節點的粒子數量超過 max_particles，則分割區域
@@ -51,31 +51,39 @@ function [quadtree, cell] = initialize_quadtree(particles, levelnum, cell, bound
             the_other_half_of_particles_cols = size(particles,2)/2;
         end
         
-        cell = {};%mat2cell(particles,size(particles,1),size(particles,2));
-        new_cell = mat2cell(particles, [fix(size(particles,1)/2), ...
+        %cell = {};%mat2cell(particles,size(particles,1),size(particles,2));
+        new_particles_in_cell = mat2cell(particles, [fix(size(particles,1)/2), ...
                                         the_other_half_of_particles_rows ], ...
                                        [fix(size(particles,2)/2), ...
                                         the_other_half_of_particles_cols] );
-        cell{1,1} = new_cell{1,1};
-        cell{1,2} = new_cell{1,2};
-        cell{2,1} = new_cell{2,1};
-        cell{2,2} = new_cell{2,2};
-        %cell是否能保有原本mask的全部元素?？                  
 
-    %%
-        quadtree = struct('children', {}, 'divided_particles', [], ...
-                          'level', levelnum,'boundary', boundary) ;
+        
+        % new_cell = new_particles_in_cell;
+        % cell{1,1} = new_cell(1,1);
+        % cell{1,2} = new_cell(1,2);
+        % cell{2,1} = new_cell(2,1);
+        % cell{2,2} = new_cell(2,2);
+        %似乎不能單獨把cell陣列的一個cell切割                
+
+    
+        quadtree = struct('children', {}, 'divided_particles', [], 'is_leaf_node', [], ...
+                          'level', levelnum,'boundary', boundary, 'coordinate',coordinate) ;
         
         % % 分割成四個區域
         % [region1, region2, region3, region4] = split_boundary(boundary);
 
         % 根據位置將粒子分配到各個區域  
         %可能可以省略
-        quadtree(1).divided_particles = new_cell{1,1};
-        quadtree(2).divided_particles = new_cell{1,2};
-        quadtree(3).divided_particles = new_cell{2,1};
-        quadtree(4).divided_particles = new_cell{2,2};
+        quadtree(1).divided_particles = new_particles_in_cell{1,1};
+        quadtree(2).divided_particles = new_particles_in_cell{1,2};
+        quadtree(3).divided_particles = new_particles_in_cell{2,1};
+        quadtree(4).divided_particles = new_particles_in_cell{2,2};
         
+        quadtree(1).is_leaf_node = 0;
+        quadtree(2).is_leaf_node = 0;
+        quadtree(3).is_leaf_node = 0;
+        quadtree(4).is_leaf_node = 0;
+
         quadtree(1).level = levelnum;
         quadtree(2).level = levelnum;
         quadtree(3).level = levelnum;
@@ -91,56 +99,72 @@ function [quadtree, cell] = initialize_quadtree(particles, levelnum, cell, bound
         new_boundary3 = [boundary(1), mid_x, mid_y, boundary(4)];
         new_boundary4 = [mid_x, boundary(2), mid_y, boundary(4)];
         
-        quadtree(1).boundary = [boundary(1), mid_x, boundary(3), mid_y];
-        quadtree(2).boundary = [mid_x, boundary(2), boundary(3), mid_y];
-        quadtree(3).boundary = [boundary(1), mid_x, mid_y, boundary(4)];
-        quadtree(4).boundary = [mid_x, boundary(2), mid_y, boundary(4)];
+        quadtree(1).boundary = new_boundary1;
+        quadtree(2).boundary = new_boundary2;
+        quadtree(3).boundary = new_boundary3;
+        quadtree(4).boundary = new_boundary4;
 
+        %處理座標
+        mid_x_prime = size(particles,2) / 2 + 1;
+        mid_y_prime = size(particles,1) / 2 + 1;
+
+        new_cor1 = [coordinate(1), coordinate(2)];
+        new_cor2 = [mid_x_prime, coordinate(2)];
+        new_cor3 = [coordinate(1), mid_y_prime];
+        new_cor4 = [mid_x_prime, mid_y_prime];
+
+        quadtree(1).coordinate = new_cor1;
+        quadtree(2).coordinate = new_cor2;
+        quadtree(3).coordinate = new_cor3;
+        quadtree(4).coordinate = new_cor4;
 
         % 遞迴地為每個子區域建立四叉樹
         quadtree(1).children = initialize_quadtree(quadtree(1).divided_particles, ...
-            levelnum + 1, cell{1,1}, new_boundary1);
+            levelnum + 1 , new_boundary1, new_cor1);
+        if isempty(quadtree(1).children)
+            quadtree(1).is_leaf_node = 1;
+        end
+
         quadtree(2).children = initialize_quadtree(quadtree(2).divided_particles, ...
-            levelnum + 1,cell{1,2},new_boundary2);
+            levelnum + 1 , new_boundary2, new_cor2);
+        if isempty(quadtree(2).children)
+            quadtree(2).is_leaf_node = 1;
+        end
+
         quadtree(3).children = initialize_quadtree(quadtree(3).divided_particles, ...
-            levelnum + 1,cell{2,1},new_boundary3);
+            levelnum + 1 , new_boundary3, new_cor3);
+        if isempty(quadtree(3).children)
+            quadtree(3).is_leaf_node = 1;
+        end
+
         quadtree(4).children = initialize_quadtree(quadtree(4).divided_particles, ...
-            levelnum + 1,cell{2,2},new_boundary4);
+            levelnum + 1 , new_boundary4, new_cor4);
+        if isempty(quadtree(4).children)
+            quadtree(4).is_leaf_node = 1;
+        end
+
     else
         % 如果粒子數量在可接受範圍內，則不分割
         % 需要給個空集合才能在後續使用isempty!!
-        quadtree = struct('children', {}, 'divided_particles', particles, ...
-                          'level', levelnum,'boundary', boundary) ;
-        quadtree(1).level = levelnum;
-        quadtree(1).boundary = boundary;
-        quadtree(1).divided_particles = particles;
-        quadtree(1).children = {};
+        % quadtree = struct('children', {}, 'divided_particles', particles, ...
+        %                   'level', levelnum,'boundary', boundary) ;
+        % quadtree(1).level = levelnum;
+        % quadtree(1).boundary = boundary;
+        % quadtree(1).divided_particles = particles;
+        % quadtree(1).children = {};
+        % quadtree(1).is_leaf_node = [];
+        quadtree = {};
     end
 end  
 
 
 
+%%做U_list
+divided_mask_clone = BFS_for_U_list_1(mask_quadtree);
 
-% U_list(400).node= (0);  %%需要使用global才有效
-% U_list(400).cell= (0);
-%V_list = struct('node', '', 'cell', {} );
-% V_list(400).node= (0);
-% V_list(400).cell= (0);
-
-% U_list = pre_order_traversal(mask_quadtree);
-
-% global U_counter_for_name %%為何會出現不會被下一句歸零的情況??????????
-% U_counter_for_name = 0;
-
-level_list = save_the_leaf_nodes_on_the_same_level(mask_quadtree);
- 
-function y = save_the_leaf_nodes_on_the_same_level(root)
-%先用廣度優先演算法 存同level 的葉節點，並且省略元素全為0的葉節點
-
-    level_list= struct('level', {} , 'cell', {} );
-    % 初始化一個佇列來存放節點
+function y = BFS_for_U_list_1(root)
     queue = {root};
-    counter = 1;
+    divided_mask_clone = num2cell(zeros(2^13)) ;
 
     while ~isempty(queue)
         % 從佇列中取出第一個節點
@@ -149,72 +173,325 @@ function y = save_the_leaf_nodes_on_the_same_level(root)
 
         % % 顯示當前節點
         % disp(currentNode);
-
-        % ignore_this = struct('name1',{},'name2',{});
-        % ignore_this(1).name = 1;
-        % U_list(counter).cell(1) = ignore_this(1);
-
-        level_list(counter).level =  counter;
-        if currentNode(1).level ~= counter
-            counter = counter + 1;
-        end
-
-        have_runned = 0;%解決陣列還沒有元素前，不能使用end+1的問題
-                        %並解決參數中的end+1語法，有一樣的資料型態甚至連結構變數都要相同的問題
-                     
+       
         % 檢查並加入子節點到佇列中
         if ~isempty(currentNode(1).children)
             queue{end + 1} = currentNode(1).children;
-            if(nnz(currentNode(1).divided_particles) ~= 0)
-                if have_runned == 0
-                    level_list(counter).cell(1) = currentNode(1);
-                    have_runned = have_runned + 1;
-                else
-                    level_list(counter).cell(end+1) = currentNode(1);
-                end
-            end
+        %%%%%%% else
+        %%%%%%%     currentNode(1).is_leaf_node = 1;
+        %%%%%%%沒成功是因為，MATLAB 中的參數傳遞是值傳遞!!!!!!!!!!!
+        end
+        %currentnode底下可能沒分支了，所以要判斷他是否有大於2的分支(即有分支)
+        if  ~isempty(currentNode(2).children)
+            queue{end + 1} = currentNode(2).children;
         end
 
-        if length(currentNode) >= 2 && ~isempty(currentNode(2).children)
-            queue{end + 1} = currentNode(2).children;      
-            if(nnz(currentNode(2).divided_particles) ~= 0)
-                if have_runned == 0
-                    level_list(counter).cell(1) = currentNode(2);
-                    have_runned = have_runned + 1;
-                else
-                    level_list(counter).cell(end+1) = currentNode(2);
-                end
-            end
-        end
-
-        if length(currentNode) >= 3 && ~isempty(currentNode(3).children)
+        if  ~isempty(currentNode(3).children)
             queue{end + 1} = currentNode(3).children;
-            if(nnz(currentNode(3).divided_particles) ~= 0)
-                if have_runned == 0
-                    level_list(counter).cell(1) = currentNode(3);
-                    have_runned = have_runned + 1;
-                else
-                    level_list(counter).cell(end+1) = currentNode(3);
-                end
-            end
         end
 
-        if length(currentNode) >= 4 && ~isempty(currentNode(4).children)
+        if  ~isempty(currentNode(4).children)
             queue{end + 1} = currentNode(4).children;
-            if(nnz(currentNode(4).divided_particles) ~= 0)
-                if have_runned == 0
-                    level_list(counter).cell(1) = currentNode(4);
-                    have_runned = have_runned + 1;
+        end
+        % 沒差
+        % if isempty(currentNode(1).children)
+        %     currentNode(1).is_leaf_node = 1;
+        % end
+        % 
+        % if isempty(currentNode(2).children)
+        %     currentNode(2).is_leaf_node = 1;
+        % end
+        % 
+        % if isempty(currentNode(3).children)
+        %     currentNode(3).is_leaf_node = 1;
+        % end
+        % 
+        % if isempty(currentNode(4).children)
+        %     currentNode(4).is_leaf_node = 1;
+        % end
+        
+        if(nnz(currentNode(1).divided_particles) ~= 0)
+            % i是x座標，j是y座標
+
+            %%因為記憶體會不足，所以從實心全賦值，改成空心
+
+            %記憶體還是不太夠，進一步改成只賦值頂點座標
+            %正方形左上與右下
+            divided_mask_clone{currentNode(1).coordinate(1), ...
+                currentNode(1).coordinate(2)}...
+                = currentNode(1);
+
+            divided_mask_clone{currentNode(1).coordinate(1)-1+ ...
+                size(currentNode(1).divided_particles,2), ...
+                ...
+                currentNode(1).coordinate(2)+ ...
+                size(currentNode(1).divided_particles,1) - 1}...
+                = currentNode(1);
+
+            %正方形左下與右上
+            divided_mask_clone{currentNode(1).coordinate(1) , ...
+                ...
+                currentNode(1).coordinate(2)-1+ ...
+                size(currentNode(1).divided_particles,1)}...
+                = currentNode(1);
+
+            divided_mask_clone{currentNode(1).coordinate(1)+...
+                size(currentNode(1).divided_particles,2) - 1 , ...
+                ...
+                currentNode(1).coordinate(2)}...
+                = currentNode(1);
+        end
+
+        if(nnz(currentNode(2).divided_particles) ~= 0)
+            %正方形左上與右下
+            divided_mask_clone{currentNode(2).coordinate(1), ...
+                currentNode(2).coordinate(2)}...
+                = currentNode(2);
+
+            divided_mask_clone{currentNode(2).coordinate(1)-1+ ...
+                size(currentNode(2).divided_particles,2), ...
+                ...
+                currentNode(2).coordinate(2)+ ...
+                size(currentNode(2).divided_particles,1) - 1}...
+                = currentNode(2);
+
+            %正方形左下與右上
+            divided_mask_clone{currentNode(2).coordinate(1) , ...
+                ...
+                currentNode(2).coordinate(2)-1+ ...
+                size(currentNode(2).divided_particles,1)}...
+                = currentNode(2);
+
+            divided_mask_clone{currentNode(2).coordinate(1)+...
+                size(currentNode(2).divided_particles,2) - 1 , ...
+                ...
+                currentNode(2).coordinate(2)}...
+                = currentNode(2);
+        end
+
+        if(nnz(currentNode(3).divided_particles) ~= 0)
+            %正方形上邊長與下邊長
+            %正方形左上與右下
+            divided_mask_clone{currentNode(3).coordinate(1), ...
+                currentNode(3).coordinate(2)}...
+                = currentNode(3);
+
+            divided_mask_clone{currentNode(3).coordinate(1)-1+ ...
+                size(currentNode(3).divided_particles,2), ...
+                ...
+                currentNode(3).coordinate(2)+ ...
+                size(currentNode(3).divided_particles,1) - 1}...
+                = currentNode(3);
+
+            %正方形左下與右上
+            divided_mask_clone{currentNode(3).coordinate(1) , ...
+                ...
+                currentNode(3).coordinate(2)-1+ ...
+                size(currentNode(3).divided_particles,1)}...
+                = currentNode(3);
+
+            divided_mask_clone{currentNode(3).coordinate(1)+...
+                size(currentNode(3).divided_particles,2) - 1 , ...
+                ...
+                currentNode(3).coordinate(2)}...
+                = currentNode(3);
+        end
+
+        if(nnz(currentNode(4).divided_particles) ~= 0)
+            %正方形上邊長與下邊長
+            %正方形左上與右下
+            divided_mask_clone{currentNode(4).coordinate(1), ...
+                currentNode(4).coordinate(2)}...
+                = currentNode(4);
+
+            divided_mask_clone{currentNode(4).coordinate(1)-1+ ...
+                size(currentNode(4).divided_particles,2), ...
+                ...
+                currentNode(4).coordinate(2)+ ...
+                size(currentNode(4).divided_particles,1) - 1}...
+                = currentNode(4);
+
+            %正方形左下與右上
+            divided_mask_clone{currentNode(4).coordinate(1) , ...
+                ...
+                currentNode(4).coordinate(2)-1+ ...
+                size(currentNode(4).divided_particles,1)}...
+                = currentNode(4);
+
+            divided_mask_clone{currentNode(4).coordinate(1)+...
+                size(currentNode(4).divided_particles,2) - 1 , ...
+                ...
+                currentNode(4).coordinate(2)}...
+                = currentNode(4);
+        end
+    end
+    y = divided_mask_clone;
+end
+
+
+[U_list] = step2(divided_mask_clone);
+%% U V List是每一個節點都需要，應該只有第一層會沒有V清單，但是是否需要處理？
+
+function x = step2(divided_mask_clone)
+    U_list = struct('node',[0 0],'U_list_of_node',[])
+    %使用迴圈，對於矩陣的座標，每64格（max particles)讀一次
+    global max_particles
+    for i = 1: max_particles: size(divided_mask_clone, 2)
+        for j = 1: max_particles: size(divided_mask_clone, 1)
+            have_runned = 0;
+
+            if divided_mask_clone(i,j) == 0
+                continue
+            else
+                %將座標x,y都先減1，判斷該座標的節點是否等於0
+                %不是的話，就讀取他的LEVEL，判斷是否與目標節點的LEVEL相同，如果是的話，就將他
+                % 加入目標節點的U LIST(如果是首次創建，有可能需要利用have_runned=0)
+                % (但這樣可能比較慢，考慮直接預建大小)
+                if divided_mask_clone(i-1,j-1)== 0
+                    continue
                 else
-                    level_list(counter).cell(end+1) = currentNode(4);
+                    if divided_mask_clone(i-1,j-1).level == divided_mask_clone(i,j).level
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i-1,j-1] ;
+
+                        have_runned = have_runned + 1;
+                    end
+                end
+
+                %下個點
+                if divided_mask_clone(i,j-1)== 0
+                    continue
+                else
+                    if divided_mask_clone(i,j-1).level == divided_mask_clone(i,j).level
+                        if have_runned == 0
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i,j-1] ;
+
+                        have_runned = have_runned + 1;
+                        else 
+                        U_list(end+1).node = [i j];
+                        U_list(end+1).U_list_of_node(end+1) = [i,j-1] ;
+                        end                        
+                    end
+                end
+
+                %下個點
+                if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j-1)== 0
+                    continue
+                else
+                    if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j-1).level ...
+                        == divided_mask_clone(i,j).level
+                        if have_runned == 0
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i+size(divided_mask_clone(i,j), 2), j-1] ;
+
+                        have_runned = have_runned + 1;
+                        else 
+                        U_list(end+1).node = [i j];
+                        U_list(end+1).U_list_of_node(end+1) = [i+size(divided_mask_clone(i,j), 2),...
+                                                                 j-1] ;
+                        end                        
+                    end
+                end
+
+                %下個點
+                if divided_mask_clone(i-1, j)== 0
+                    continue
+                else
+                    if divided_mask_clone(i-1, j).level ...
+                        == divided_mask_clone(i,j).level
+                        if have_runned == 0
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i-1, j] ;
+
+                        have_runned = have_runned + 1;
+                        else 
+                        U_list(end+1).node = [i j];
+                        U_list(end+1).U_list_of_node(end+1) = [i-1, j] ;
+                        end                        
+                    end
+                end
+                
+                %下個點
+                if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j)== 0
+                    continue
+                else
+                    if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j).level ...
+                        == divided_mask_clone(i,j).level
+                        if have_runned == 0
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i+size(divided_mask_clone(i,j), 2), j] ;
+
+                        have_runned = have_runned + 1;
+                        else 
+                        U_list(end+1).node = [i j];
+                        U_list(end+1).U_list_of_node(end+1) = [i+size(divided_mask_clone(i,j), 2), j] ;
+                        end                        
+                    end
+                end
+                
+                %左下角的點
+                if divided_mask_clone(i-1, j+size(divided_mask_clone(i,j), 1))== 0
+                    continue
+                else
+                    if divided_mask_clone(i-1, j+size(divided_mask_clone(i,j), 1)).level ...
+                        == divided_mask_clone(i,j).level
+                        if have_runned == 0
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i-1, j+size(divided_mask_clone(i,j), 1)] ;
+
+                        have_runned = have_runned + 1;
+                        else 
+                        U_list(end+1).node = [i j];
+                        U_list(end+1).U_list_of_node(end+1) =...
+                            [i-1, j+size(divided_mask_clone(i,j), 1)] ;
+                        end                        
+                    end
+                end
+
+                %下個點
+                if divided_mask_clone(i, j+size(divided_mask_clone(i,j), 1))== 0
+                    continue
+                else
+                    if divided_mask_clone(i, j+size(divided_mask_clone(i,j), 1)).level ...
+                        == divided_mask_clone(i,j).level
+                        if have_runned == 0
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i, j+size(divided_mask_clone(i,j), 1)] ;
+
+                        have_runned = have_runned + 1;
+                        else 
+                        U_list(end+1).node = [i j];
+                        U_list(end+1).U_list_of_node(end+1) = [i, j+size(divided_mask_clone(i,j), 1)] ;
+                        end                        
+                    end
+                end
+
+                %最後一個點 也就是第八個點
+                if divided_mask_clone(i+size(divided_mask_clone(i,j), 2),...
+                                        j+size(divided_mask_clone(i,j), 1))== 0
+                    continue
+                else
+                    if divided_mask_clone(i+size(divided_mask_clone(i,j), 2),...
+                                             j+size(divided_mask_clone(i,j), 1)).level ...
+                        == divided_mask_clone(i,j).level
+                        if have_runned == 0
+                        U_list(1).node = [i j];
+                        U_list(1).U_list_of_node(1) = [i+size(divided_mask_clone(i,j), 2),...
+                                                         j+size(divided_mask_clone(i,j), 1)] ;
+
+                        have_runned = have_runned + 1;
+                        else 
+                        U_list(end+1).node = [i j];
+                        U_list(end+1).U_list_of_node(end+1) = [i+size(divided_mask_clone(i,j), 2),...
+                                                                j+size(divided_mask_clone(i,j), 1)] ;
+                        end                        
+                    end
                 end
             end
         end
     end
-
-    y = level_list;
 end
-
 % % 
 % % 
 % % Upward pass
