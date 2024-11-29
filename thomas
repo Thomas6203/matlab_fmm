@@ -164,7 +164,7 @@ divided_mask_clone = BFS_for_U_list_1(mask_quadtree);
 
 function y = BFS_for_U_list_1(root)
     queue = {root};
-    divided_mask_clone = num2cell(zeros(2^13)) ;
+    % divided_mask_clone = num2cell(zeros(2^13)) ;
 
     while ~isempty(queue)
         % 從佇列中取出第一個節點
@@ -270,7 +270,6 @@ function y = BFS_for_U_list_1(root)
         end
 
         if(nnz(currentNode(3).divided_particles) ~= 0)
-            %正方形上邊長與下邊長
             %正方形左上與右下
             divided_mask_clone{currentNode(3).coordinate(1), ...
                 currentNode(3).coordinate(2)}...
@@ -298,7 +297,6 @@ function y = BFS_for_U_list_1(root)
         end
 
         if(nnz(currentNode(4).divided_particles) ~= 0)
-            %正方形上邊長與下邊長
             %正方形左上與右下
             divided_mask_clone{currentNode(4).coordinate(1), ...
                 currentNode(4).coordinate(2)}...
@@ -329,169 +327,69 @@ function y = BFS_for_U_list_1(root)
 end
 
 
-[U_list] = step2(divided_mask_clone);
-%% U V List是每一個節點都需要，應該只有第一層會沒有V清單，但是是否需要處理？
+U_list = U_List_step2(divided_mask_clone);
+function U_list = U_List_step2(divided_mask_clone)
+    % 預分配一個足夠大的結構體陣列
+    max_nodes = numel(divided_mask_clone);
+    U_list = struct('node', cell(1, max_nodes), 'U_list_of_node', cell(1, max_nodes));
+    counter1 = 1;
 
-function x = step2(divided_mask_clone)
-    U_list = struct('node',[0 0],'U_list_of_node',[])
-    %使用迴圈，對於矩陣的座標，每64格（max particles)讀一次
-    global max_particles
-    for i = 1: max_particles: size(divided_mask_clone, 2)
-        for j = 1: max_particles: size(divided_mask_clone, 1)
-            have_runned = 0;
-
-            if divided_mask_clone(i,j) == 0
-                continue
-            else
-                %將座標x,y都先減1，判斷該座標的節點是否等於0
-                %不是的話，就讀取他的LEVEL，判斷是否與目標節點的LEVEL相同，如果是的話，就將他
-                % 加入目標節點的U LIST(如果是首次創建，有可能需要利用have_runned=0)
-                % (但這樣可能比較慢，考慮直接預建大小)
-                if divided_mask_clone(i-1,j-1)== 0
-                    continue
-                else
-                    if divided_mask_clone(i-1,j-1).level == divided_mask_clone(i,j).level
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i-1,j-1] ;
-
-                        have_runned = have_runned + 1;
-                    end
-                end
-
-                %下個點
-                if divided_mask_clone(i,j-1)== 0
-                    continue
-                else
-                    if divided_mask_clone(i,j-1).level == divided_mask_clone(i,j).level
-                        if have_runned == 0
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i,j-1] ;
-
-                        have_runned = have_runned + 1;
-                        else 
-                        U_list(end+1).node = [i j];
-                        U_list(end+1).U_list_of_node(end+1) = [i,j-1] ;
-                        end                        
-                    end
-                end
-
-                %下個點
-                if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j-1)== 0
-                    continue
-                else
-                    if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j-1).level ...
-                        == divided_mask_clone(i,j).level
-                        if have_runned == 0
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i+size(divided_mask_clone(i,j), 2), j-1] ;
-
-                        have_runned = have_runned + 1;
-                        else 
-                        U_list(end+1).node = [i j];
-                        U_list(end+1).U_list_of_node(end+1) = [i+size(divided_mask_clone(i,j), 2),...
-                                                                 j-1] ;
-                        end                        
-                    end
-                end
-
-                %下個點
-                if divided_mask_clone(i-1, j)== 0
-                    continue
-                else
-                    if divided_mask_clone(i-1, j).level ...
-                        == divided_mask_clone(i,j).level
-                        if have_runned == 0
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i-1, j] ;
-
-                        have_runned = have_runned + 1;
-                        else 
-                        U_list(end+1).node = [i j];
-                        U_list(end+1).U_list_of_node(end+1) = [i-1, j] ;
-                        end                        
-                    end
-                end
+    % 使用單位步長遍歷所有節點
+    for i = 1:size(divided_mask_clone, 2)
+        for j = 1:size(divided_mask_clone, 1)
+            if ~isempty(divided_mask_clone{i,j})
+                current_node = divided_mask_clone{i,j};
+                neighbors = find_neighbors(divided_mask_clone, i, j, current_node);
                 
-                %下個點
-                if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j)== 0
-                    continue
-                else
-                    if divided_mask_clone(i+size(divided_mask_clone(i,j), 2), j).level ...
-                        == divided_mask_clone(i,j).level
-                        if have_runned == 0
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i+size(divided_mask_clone(i,j), 2), j] ;
-
-                        have_runned = have_runned + 1;
-                        else 
-                        U_list(end+1).node = [i j];
-                        U_list(end+1).U_list_of_node(end+1) = [i+size(divided_mask_clone(i,j), 2), j] ;
-                        end                        
-                    end
-                end
-                
-                %左下角的點
-                if divided_mask_clone(i-1, j+size(divided_mask_clone(i,j), 1))== 0
-                    continue
-                else
-                    if divided_mask_clone(i-1, j+size(divided_mask_clone(i,j), 1)).level ...
-                        == divided_mask_clone(i,j).level
-                        if have_runned == 0
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i-1, j+size(divided_mask_clone(i,j), 1)] ;
-
-                        have_runned = have_runned + 1;
-                        else 
-                        U_list(end+1).node = [i j];
-                        U_list(end+1).U_list_of_node(end+1) =...
-                            [i-1, j+size(divided_mask_clone(i,j), 1)] ;
-                        end                        
-                    end
-                end
-
-                %下個點
-                if divided_mask_clone(i, j+size(divided_mask_clone(i,j), 1))== 0
-                    continue
-                else
-                    if divided_mask_clone(i, j+size(divided_mask_clone(i,j), 1)).level ...
-                        == divided_mask_clone(i,j).level
-                        if have_runned == 0
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i, j+size(divided_mask_clone(i,j), 1)] ;
-
-                        have_runned = have_runned + 1;
-                        else 
-                        U_list(end+1).node = [i j];
-                        U_list(end+1).U_list_of_node(end+1) = [i, j+size(divided_mask_clone(i,j), 1)] ;
-                        end                        
-                    end
-                end
-
-                %最後一個點 也就是第八個點
-                if divided_mask_clone(i+size(divided_mask_clone(i,j), 2),...
-                                        j+size(divided_mask_clone(i,j), 1))== 0
-                    continue
-                else
-                    if divided_mask_clone(i+size(divided_mask_clone(i,j), 2),...
-                                             j+size(divided_mask_clone(i,j), 1)).level ...
-                        == divided_mask_clone(i,j).level
-                        if have_runned == 0
-                        U_list(1).node = [i j];
-                        U_list(1).U_list_of_node(1) = [i+size(divided_mask_clone(i,j), 2),...
-                                                         j+size(divided_mask_clone(i,j), 1)] ;
-
-                        have_runned = have_runned + 1;
-                        else 
-                        U_list(end+1).node = [i j];
-                        U_list(end+1).U_list_of_node(end+1) = [i+size(divided_mask_clone(i,j), 2),...
-                                                                j+size(divided_mask_clone(i,j), 1)] ;
-                        end                        
-                    end
+                if ~isempty(neighbors)
+                    U_list(counter1).node = [i j];
+                    U_list(counter1).U_list_of_node = neighbors;
+                    counter1 = counter1 + 1;
                 end
             end
         end
     end
+    
+    % 移除未使用的預分配空間
+    U_list = U_list(1:counter1-1);
 end
+
+function neighbors = find_neighbors(divided_mask_clone, i, j, current_node)
+    neighbors = {};
+    counter = 1;
+    
+    % 定義8個相鄰方向的偏移量
+    offsets = [
+        -1 -1; 0 -1; 1 -1;
+        -1  0;       1  0;
+        -1  1; 0  1; 1  1
+    ];
+    
+    node_size = size(current_node.divided_particles);
+    
+    for k = 1:size(offsets, 1)
+        ni = i + offsets(k,1) * node_size(2);
+        nj = j + offsets(k,2) * node_size(1);
+        
+        if ni >= 1 && ni <= size(divided_mask_clone,2) && ...
+           nj >= 1 && nj <= size(divided_mask_clone,1) && ...
+           ~isempty(divided_mask_clone{ni,nj})
+            
+            neighbor = divided_mask_clone{ni,nj};
+            if neighbor.level == current_node.level
+                neighbors{counter} = [ni nj];
+                counter = counter + 1;
+            end
+        end
+    end
+end
+
+
+
+
+
+
+
 % % 
 % % 
 % % Upward pass
