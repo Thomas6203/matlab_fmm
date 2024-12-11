@@ -5,11 +5,16 @@ n = 4;
 
 global max_particles
 max_particles = 4*n^2;
-mask(2^13,2^13)=0; %2^13是最靠近且大於mask邊長大小的2的指數，目的是讓mask在分割時，不出現小數座標
+
+augmented_mask = augment(mask);
+function y = augment(mask)
+    mask(2^13,2^13)=0; %2^13是最靠近且大於mask邊長大小的2的指數，目的是讓mask在分割時，不出現小數座標
+    y = mask;
+end
 levelnum = 1;
 
-[mask_quadtree]= initialize_quadtree(mask, levelnum, ...
-                                            normalized_boundary(mask), [1,1]);
+[mask_quadtree]= initialize_quadtree(augmented_mask, levelnum, ...
+                                            normalized_boundary(augmented_mask), [1,1]);
 
 %% Initialization
 function normalized_boundary = normalized_boundary(matrix)
@@ -160,11 +165,12 @@ end
 
 
 %%做U_list
-divided_mask_clone = BFS_for_U_list_1(mask_quadtree);
+divided_mask_clone = BFS_for_U_list_1(mask_quadtree, mask);
 
-function y = BFS_for_U_list_1(root)
+function y = BFS_for_U_list_1(root, mask)
     queue = {root};
     % divided_mask_clone = num2cell(zeros(2^13)) ;
+    divided_mask_clone = cell(max(size(mask,1), size(mask,2) ) );
 
     while ~isempty(queue)
         % 從佇列中取出第一個節點
@@ -193,7 +199,7 @@ function y = BFS_for_U_list_1(root)
         if  ~isempty(currentNode(4).children)
             queue{end + 1} = currentNode(4).children;
         end
-        % 沒差
+        % 因為是值傳遞，所以下面幾句不能直接修改到mask quadtree，要另外想辦法
         % if isempty(currentNode(1).children)
         %     currentNode(1).is_leaf_node = 1;
         % end
@@ -210,7 +216,7 @@ function y = BFS_for_U_list_1(root)
         %     currentNode(4).is_leaf_node = 1;
         % end
         
-        if(nnz(currentNode(1).divided_particles) ~= 0)
+        if(nnz(currentNode(1).divided_particles) ~= 0) %*如果最後結果有問題，要考慮是否不移除0節點
             % i是x座標，j是y座標
 
             %%因為記憶體會不足，所以從實心全賦值，改成空心
@@ -221,25 +227,38 @@ function y = BFS_for_U_list_1(root)
                 currentNode(1).coordinate(2)}...
                 = currentNode(1);
 
-            divided_mask_clone{currentNode(1).coordinate(1)-1+ ...
+             if (currentNode(1).coordinate(1)-1+ ...
+                size(currentNode(1).divided_particles,2)) <= size(mask,2)...
+                && (currentNode(1).coordinate(2)+ ...
+                size(currentNode(1).divided_particles,1) - 1) <= size(mask,1)
+
+                divided_mask_clone{currentNode(1).coordinate(1)-1+ ...
                 size(currentNode(1).divided_particles,2), ...
                 ...
                 currentNode(1).coordinate(2)+ ...
                 size(currentNode(1).divided_particles,1) - 1}...
+                ...
                 = currentNode(1);
-
+            end
             %正方形左下與右上
-            divided_mask_clone{currentNode(1).coordinate(1) , ...
+            if currentNode(1).coordinate(2)-1+ ...
+                size(currentNode(1).divided_particles,1) <= size(mask,1)
+
+                divided_mask_clone{currentNode(1).coordinate(1) , ...
                 ...
                 currentNode(1).coordinate(2)-1+ ...
                 size(currentNode(1).divided_particles,1)}...
                 = currentNode(1);
+            end
+            if currentNode(1).coordinate(1)+...
+                size(currentNode(1).divided_particles,2) - 1 <= size(mask,2)
 
             divided_mask_clone{currentNode(1).coordinate(1)+...
                 size(currentNode(1).divided_particles,2) - 1 , ...
                 ...
                 currentNode(1).coordinate(2)}...
                 = currentNode(1);
+            end
         end
 
         if(nnz(currentNode(2).divided_particles) ~= 0)
@@ -248,25 +267,38 @@ function y = BFS_for_U_list_1(root)
                 currentNode(2).coordinate(2)}...
                 = currentNode(2);
 
-            divided_mask_clone{currentNode(2).coordinate(1)-1+ ...
+            if currentNode(2).coordinate(1)-1+ ...
+                size(currentNode(2).divided_particles,2) <= size(mask,2)...
+                && currentNode(2).coordinate(2)+ ...
+                size(currentNode(2).divided_particles,1) - 1 <= size(mask,1)
+
+                divided_mask_clone{currentNode(2).coordinate(1)-1+ ...
                 size(currentNode(2).divided_particles,2), ...
                 ...
                 currentNode(2).coordinate(2)+ ...
                 size(currentNode(2).divided_particles,1) - 1}...
+                ...
                 = currentNode(2);
-
+            end
             %正方形左下與右上
-            divided_mask_clone{currentNode(2).coordinate(1) , ...
+            if currentNode(2).coordinate(2)-1+ ...
+                size(currentNode(2).divided_particles,1) <= size(mask,1)
+
+                divided_mask_clone{currentNode(2).coordinate(1) , ...
                 ...
                 currentNode(2).coordinate(2)-1+ ...
                 size(currentNode(2).divided_particles,1)}...
                 = currentNode(2);
+            end
+            if currentNode(2).coordinate(1)+...
+                size(currentNode(2).divided_particles,2) - 1 <= size(mask,2)
 
             divided_mask_clone{currentNode(2).coordinate(1)+...
                 size(currentNode(2).divided_particles,2) - 1 , ...
                 ...
                 currentNode(2).coordinate(2)}...
                 = currentNode(2);
+            end
         end
 
         if(nnz(currentNode(3).divided_particles) ~= 0)
@@ -275,25 +307,38 @@ function y = BFS_for_U_list_1(root)
                 currentNode(3).coordinate(2)}...
                 = currentNode(3);
 
-            divided_mask_clone{currentNode(3).coordinate(1)-1+ ...
+            if currentNode(3).coordinate(1)-1+ ...
+                size(currentNode(3).divided_particles,2) <= size(mask,2)...
+                && currentNode(3).coordinate(2)+ ...
+                size(currentNode(3).divided_particles,1) - 1 <= size(mask,1)
+
+                divided_mask_clone{currentNode(3).coordinate(1)-1+ ...
                 size(currentNode(3).divided_particles,2), ...
                 ...
                 currentNode(3).coordinate(2)+ ...
                 size(currentNode(3).divided_particles,1) - 1}...
+                ...
                 = currentNode(3);
-
+            end
             %正方形左下與右上
-            divided_mask_clone{currentNode(3).coordinate(1) , ...
+            if currentNode(3).coordinate(2)-1+ ...
+                size(currentNode(3).divided_particles,1) <= size(mask,1)
+
+                divided_mask_clone{currentNode(3).coordinate(1) , ...
                 ...
                 currentNode(3).coordinate(2)-1+ ...
                 size(currentNode(3).divided_particles,1)}...
                 = currentNode(3);
+            end
+            if currentNode(3).coordinate(1)+...
+                size(currentNode(3).divided_particles,2) - 1 <= size(mask,2)
 
             divided_mask_clone{currentNode(3).coordinate(1)+...
                 size(currentNode(3).divided_particles,2) - 1 , ...
                 ...
                 currentNode(3).coordinate(2)}...
                 = currentNode(3);
+            end
         end
 
         if(nnz(currentNode(4).divided_particles) ~= 0)
@@ -301,57 +346,82 @@ function y = BFS_for_U_list_1(root)
             divided_mask_clone{currentNode(4).coordinate(1), ...
                 currentNode(4).coordinate(2)}...
                 = currentNode(4);
+            if currentNode(4).coordinate(1)-1+ ...
+                size(currentNode(4).divided_particles,2) <= size(mask,2)...
+                && currentNode(4).coordinate(2)+ ...
+                size(currentNode(4).divided_particles,1) - 1 <= size(mask,1)
 
-            divided_mask_clone{currentNode(4).coordinate(1)-1+ ...
+                divided_mask_clone{currentNode(4).coordinate(1)-1+ ...
                 size(currentNode(4).divided_particles,2), ...
                 ...
                 currentNode(4).coordinate(2)+ ...
                 size(currentNode(4).divided_particles,1) - 1}...
+                ...
                 = currentNode(4);
-
+            end
             %正方形左下與右上
-            divided_mask_clone{currentNode(4).coordinate(1) , ...
+            if currentNode(4).coordinate(2)-1+ ...
+                size(currentNode(4).divided_particles,1) <= size(mask,1)
+
+                divided_mask_clone{currentNode(4).coordinate(1) , ...
                 ...
                 currentNode(4).coordinate(2)-1+ ...
                 size(currentNode(4).divided_particles,1)}...
                 = currentNode(4);
+            end
+            if currentNode(4).coordinate(1)+...
+                size(currentNode(4).divided_particles,2) - 1 <= size(mask,2)
 
             divided_mask_clone{currentNode(4).coordinate(1)+...
                 size(currentNode(4).divided_particles,2) - 1 , ...
                 ...
                 currentNode(4).coordinate(2)}...
                 = currentNode(4);
+            end
+            
         end
     end
     y = divided_mask_clone;
 end
 
 
-U_list = U_List_step2(divided_mask_clone);
-function U_list = U_List_step2(divided_mask_clone)
-    % 預分配一個足夠大的結構體陣列
-    max_nodes = numel(divided_mask_clone);
-    U_list = struct('node', cell(1, max_nodes), 'U_list_of_node', cell(1, max_nodes));
+[U_list, V_list] = U_List_step2(divided_mask_clone);
+function [U_list, V_list] = U_List_step2(divided_mask_clone)
+    % % 預分配一個足夠大的結構體陣列
+    % max_nodes = 8192^2 /64;
+    U_list = struct('node', {}, 'U_list_of_node', {});
+    V_list = struct('node', {}, 'V_list_of_node', {});
     counter1 = 1;
+    counter2 = 1;
 
     % 使用單位步長遍歷所有節點
     for i = 1:size(divided_mask_clone, 2)
         for j = 1:size(divided_mask_clone, 1)
+
             if ~isempty(divided_mask_clone{i,j})
                 current_node = divided_mask_clone{i,j};
+
                 neighbors = find_neighbors(divided_mask_clone, i, j, current_node);
-                
                 if ~isempty(neighbors)
                     U_list(counter1).node = [i j];
                     U_list(counter1).U_list_of_node = neighbors;
                     counter1 = counter1 + 1;
                 end
+
+                neighbors_of_neighbors = find_neighbors_of_neighbors(divided_mask_clone, i, j, current_node);
+                if ~isempty(neighbors_of_neighbors)
+                    V_list(counter2).node = [i j];
+                    V_list(counter2).V_list_of_node = neighbors_of_neighbors;
+                    counter2 = counter2 + 1;
+                end
+
             end
         end
     end
     
     % 移除未使用的預分配空間
     U_list = U_list(1:counter1-1);
+    V_list = V_list(1:counter1-1);
 end
 
 function neighbors = find_neighbors(divided_mask_clone, i, j, current_node)
@@ -384,9 +454,40 @@ function neighbors = find_neighbors(divided_mask_clone, i, j, current_node)
     end
 end
 
-
-
-
+function neighbors_of_neighbors = find_neighbors_of_neighbors(divided_mask_clone, i, j, current_node)
+    neighbors_of_neighbors = {};
+    counter = 1;
+    
+    % 定義相鄰的相鄰方向的偏移量
+    offsets = [
+  -3 -3; -2 -3; -1 -3; 0 -3; 1 -3; 2 -3; 3 -3;
+  -3 -2; -2 -2; -1 -2; 0 -2; 1 -2; 2 -2; 3 -2;
+  -3 -1; -2 -1;                    2 -1; 3 -1; 
+  -3  0; -2  0;                    2  0; 3  0;
+  -3  1; -2  1;                    2  1; 3  1; 
+  -3  2; -2  2; -1  2; 0  2; 1  2; 2  2; 3  2;
+  -3  3; -2  3; -1  3; 0  3; 1  3; 2  3; 3  3;
+    ];
+    
+    node_size = size(current_node.divided_particles);
+    
+    for k = 1:size(offsets, 1)
+        ni = i + offsets(k,1) * node_size(2);
+        nj = j + offsets(k,2) * node_size(1);
+        
+        if ni >= 1 && ni <= size(divided_mask_clone,2) && ...
+           nj >= 1 && nj <= size(divided_mask_clone,1) && ...
+           ~isempty(divided_mask_clone{ni,nj})
+            
+            neighbor = divided_mask_clone{ni,nj};
+            if neighbor.level == current_node.level
+                neighbors_of_neighbors{counter} = [ni nj];
+                counter = counter + 1;
+            end
+        end
+    end
+end
+%no empty entries checked
 
 
 
